@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"net"
 	"net/http"
 )
 
@@ -26,5 +27,32 @@ func main() {
 		}
 		http.FileServer(http.Dir(".")).ServeHTTP(w, r)
 	})
+
+	if *verbose {
+		log.Print("Liste of interfaces: ", getInterfaces())
+	}
+	log.Print("Listening on ", *host)
 	log.Fatal(http.ListenAndServe(*host, nil))
+}
+
+func getInterfaces() (intList []string) {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		log.Print("Failed to retrieve list of interfaces")
+	} else {
+		for _, i := range interfaces {
+			addrs, err := i.Addrs()
+			if err != nil {
+				log.Println("Failed to retrieve list of addresses for interface ", i.Name)
+			}
+			for _, j := range addrs {
+				ip, _, err := net.ParseCIDR(j.String())
+				if err != nil {
+					log.Println("Failed to extract IP from interface")
+				}
+				intList = append(intList, ip.String())
+			}
+		}
+	}
+	return intList
 }
